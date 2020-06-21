@@ -84,7 +84,7 @@ class RequestsResponse:
 class HTTPSRequestsConnectionClass(object):
     # mimic the httplib connection object
     def __init__(
-        self, host, port=None, strict=False, timeout=None, retry=None, **kwargs
+        self, host, port=None, strict=False, timeout=None, retry=None, proxy=None, **kwargs
     ):
         self.port = port if port else 443
         self.host = host
@@ -92,6 +92,7 @@ class HTTPSRequestsConnectionClass(object):
         self.timeout = timeout
         self.verify = kwargs.get("verify", True)
         self.session = requests.Session()
+        self.proxy = proxy
         # Code to support retries
         if retry:
             self.retry = retry
@@ -107,14 +108,26 @@ class HTTPSRequestsConnectionClass(object):
     def getresponse(self):
         verb = getattr(self.session, self.verb.lower())
         url = "%s://%s:%s%s" % (self.protocol, self.host, self.port, self.url)
-        r = verb(
+        if self.proxy :
+          r = verb(
             url,
             headers=self.headers,
             data=self.input,
             timeout=self.timeout,
             verify=self.verify,
             allow_redirects=False,
-        )
+            proxies=self.proxy
+          )
+        else :
+          r = verb(
+              url,
+              headers=self.headers,
+              data=self.input,
+              timeout=self.timeout,
+              verify=self.verify,
+              allow_redirects=False,
+          )
+        
         return RequestsResponse(r)
 
     def close(self):
@@ -124,7 +137,7 @@ class HTTPSRequestsConnectionClass(object):
 class HTTPRequestsConnectionClass(object):
     # mimic the httplib connection object
     def __init__(
-        self, host, port=None, strict=False, timeout=None, retry=None, **kwargs
+        self, host, port=None, strict=False, timeout=None, retry=None, proxy=None, **kwargs
     ):
         self.port = port if port else 80
         self.host = host
@@ -132,6 +145,7 @@ class HTTPRequestsConnectionClass(object):
         self.timeout = timeout
         self.verify = kwargs.get("verify", True)
         self.session = requests.Session()
+        self.proxy = proxy
         # Code to support retries
         if retry:
             self.retry = retry
@@ -147,14 +161,27 @@ class HTTPRequestsConnectionClass(object):
     def getresponse(self):
         verb = getattr(self.session, self.verb.lower())
         url = "%s://%s:%s%s" % (self.protocol, self.host, self.port, self.url)
-        r = verb(
-            url,
-            headers=self.headers,
-            data=self.input,
-            timeout=self.timeout,
-            verify=self.verify,
-            allow_redirects=False,
-        )
+        
+        if self.proxy :
+          r = verb(
+              url,
+              headers=self.headers,
+              data=self.input,
+              timeout=self.timeout,
+              verify=self.verify,
+              allow_redirects=False,
+              proxies=self.proxy
+          )
+        else :
+          r = verb(
+              url,
+              headers=self.headers,
+              data=self.input,
+              timeout=self.timeout,
+              verify=self.verify,
+              allow_redirects=False,
+          )
+        
         return RequestsResponse(r)
 
     def close(self):
@@ -266,6 +293,7 @@ class Requester:
         per_page,
         verify,
         retry,
+        proxy=None
     ):
         self._initializeDebugFeature()
 
@@ -282,6 +310,7 @@ class Requester:
         else:
             self.__authorizationHeader = None
 
+        self.__proxy = proxy
         self.__base_url = base_url
         o = urllib.parse.urlparse(base_url)
         self.__hostname = o.hostname
@@ -356,11 +385,11 @@ class Requester:
             ):  # issue80
                 if o.scheme == "http":
                     cnx = self.__httpConnectionClass(
-                        o.hostname, o.port, retry=self.__retry
+                        o.hostname, o.port, retry=self.__retry, proxy=self.__proxy
                     )
                 elif o.scheme == "https":
                     cnx = self.__httpsConnectionClass(
-                        o.hostname, o.port, retry=self.__retry
+                        o.hostname, o.port, retry=self.__retry, proxy=self.__proxy
                     )
         return cnx
 
@@ -561,7 +590,7 @@ class Requester:
             return self.__connection
 
         self.__connection = self.__connectionClass(
-            self.__hostname, self.__port, retry=self.__retry, **kwds
+            self.__hostname, self.__port, retry=self.__retry, proxy=self.__proxy, **kwds
         )
 
         return self.__connection

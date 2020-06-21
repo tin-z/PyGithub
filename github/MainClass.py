@@ -105,6 +105,7 @@ class Github(object):
         per_page=DEFAULT_PER_PAGE,
         verify=True,
         retry=None,
+        proxy=None
     ):
         """
         :param login_or_token: string
@@ -117,6 +118,7 @@ class Github(object):
         :param per_page: int
         :param verify: boolean or string
         :param retry: int or urllib3.util.retry.Retry object
+        :param proxy: proxy dict, e.g. "http":"http://10.10.1.10:3128", "https": ...
         """
 
         assert login_or_token is None or isinstance(login_or_token, str), login_or_token
@@ -132,6 +134,7 @@ class Github(object):
             or isinstance(retry, (int))
             or isinstance(retry, (urllib3.util.Retry))
         )
+        assert proxy is None or isinstance(proxy, dict), proxy
         if client_id is not None or client_secret is not None:
             warnings.warn(
                 "client_id and client_secret are deprecated and will be removed in a future release, switch to token authentication",
@@ -150,6 +153,7 @@ class Github(object):
             per_page,
             verify,
             retry,
+            proxy=proxy
         )
 
     def __get_FIX_REPO_GET_GIT_REF(self):
